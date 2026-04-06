@@ -70,6 +70,18 @@ export function getRiskLevel(params: {
   return "Low risk";
 }
 
+
+export function getRiskBadge(params: {
+  probability: number;
+  p50: number;
+  p85: number;
+  p95: number;
+  variability: VariabilityLevel;
+  zeroPeriods: number;
+  totalPeriods: number;
+}): RiskLevel {
+  return getRiskLevel(params);
+}
 export function buildHistogram(results: number[], maxBins = 18): HistogramBin[] {
   if (!results.length) return [];
   const min = Math.min(...results);
