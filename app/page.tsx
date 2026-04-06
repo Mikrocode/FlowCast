@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
+import { AnimatedDiceLogo } from "@/components/AnimatedDiceLogo";
 import { DeliverySignal } from "@/components/DeliverySignal";
-import { FlowCastLogo } from "@/components/FlowCastLogo";
 import { ForecastDistributionChart } from "@/components/ForecastDistributionChart";
 import { ThroughputChart } from "@/components/ThroughputChart";
 import { generateRealisticSampleThroughput } from "@/lib/generateSampleThroughput";
@@ -225,15 +226,18 @@ export default function Home() {
   }
 
   const canRunForecast = isValid && hasThroughputData;
+  const cardClass = "surface-card rounded-2xl p-6";
 
   return (
-    <main className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-12 sm:px-6">
-      <div className="mb-10 text-center">
-        <div className="mb-4 flex justify-center">
-          <FlowCastLogo className="h-16 w-16 text-indigo-600 sm:h-[4.5rem] sm:w-[4.5rem]" />
+    <div className="relative min-h-screen overflow-hidden">
+      <AnimatedBackground />
+      <main className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-12 sm:px-6 sm:py-14">
+      <div className="mb-12 text-center sm:mb-14">
+        <div className="mb-5 flex justify-center">
+          <AnimatedDiceLogo className="h-20 w-20 text-indigo-600 sm:h-24 sm:w-24" />
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Flow Cast</h1>
-        <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[0.95rem]">
           I&apos;ll help you turn your throughput history into a probability-based finish forecast — right in the browser.
           Try a fresh sample run or drop in your own numbers when you&apos;re ready.
         </p>
@@ -241,7 +245,7 @@ export default function Home() {
 
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className={cardClass}>
             <h2 className="text-sm font-medium text-slate-800">Throughput history</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-500">
               Start with what you already track: one completed-items count per period — sprint, week, whatever cadence you use. Paste-friendly
@@ -291,7 +295,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className={cardClass}>
             <label htmlFor="remaining" className="block text-sm font-medium text-slate-700">
               How much is left?
             </label>
@@ -383,7 +387,7 @@ export default function Home() {
         </div>
 
         {throughputHistory.length > 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className={cardClass}>
             <h2 className="text-sm font-medium text-slate-800">History chart</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-500">
               Have a quick look at the shape — lumpy spikes or long stretches at zero will flow straight through into your forecast.
@@ -410,7 +414,7 @@ export default function Home() {
           {cards.map((card) => (
             <div
               key={card.label}
-              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+              className="surface-card rounded-2xl p-5"
             >
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 {card.label}
@@ -424,7 +428,7 @@ export default function Home() {
         </div>
 
         {p50 != null && p85 != null && p95 != null && histogram.length > 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className={cardClass}>
             <h2 className="text-sm font-medium text-slate-800">Forecast distribution</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-500">
               This shows the full shape of outcomes across simulations so uncertainty is visible, not hidden behind three points.
@@ -461,7 +465,7 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-5 py-4 text-center shadow-sm">
+          <div className="surface-card rounded-2xl border-dashed px-5 py-4 text-center">
             <p className="text-sm leading-relaxed text-slate-600">
               Run the forecast when your history and remaining scope feel right — I&apos;ll spell out what the probability spread implies for your next
               planning conversation.
@@ -470,6 +474,7 @@ export default function Home() {
         )}
       </div>
     </main>
+    </div>
   );
 }
 
