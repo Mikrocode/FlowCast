@@ -12,6 +12,9 @@ export function runMonteCarlo(
   if (n === 0 || remainingItems <= 0 || simulations <= 0) {
     return results;
   }
+  if (!throughputHistory.some((t) => t > 0)) {
+    return results;
+  }
 
   for (let i = 0; i < simulations; i++) {
     let remaining = remainingItems;
