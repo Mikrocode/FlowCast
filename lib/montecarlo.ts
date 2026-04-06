@@ -12,19 +12,27 @@ export function runMonteCarlo(
   if (n === 0 || remainingItems <= 0 || simulations <= 0) {
     return results;
   }
-  if (!throughputHistory.some((t) => t > 0)) {
+  const positiveThroughput = throughputHistory.filter((t) => t > 0);
+  if (positiveThroughput.length === 0) {
     return results;
   }
+
+  const minPositiveThroughput = Math.min(...positiveThroughput);
+  const idealPeriods = Math.ceil(remainingItems / minPositiveThroughput);
+  // Guardrail to prevent pathological long runs when history contains many zero-throughput periods.
+  const maxPeriodsPerSimulation = Math.max(idealPeriods * 12, idealPeriods + 150);
 
   for (let i = 0; i < simulations; i++) {
     let remaining = remainingItems;
     let periods = 0;
-    while (remaining > 0) {
+
+    while (remaining > 0 && periods < maxPeriodsPerSimulation) {
       const idx = Math.floor(Math.random() * n);
       const throughput = throughputHistory[idx];
       remaining -= throughput;
       periods++;
     }
+
     results.push(periods);
   }
 
