@@ -1,0 +1,23 @@
+---
+description: Flow Cast — consultant-style UX copy (warm, clear, expert peer)
+globs: app/**/*.tsx,components/**/*.tsx
+alwaysApply: false
+---
+
+# Flow Cast voice
+
+When editing UI strings, errors, hints, empty states, or new features in Flow Cast:
+
+- **Sound like a friendly delivery consultant** talking to a smart stakeholder: direct, calm, no jargon walls. Use "I" and "we" lightly ("I'd use this…", "Here's what I'm seeing…").
+- **Prefer plain language** over product-manual tone. Short paragraphs beat bullet stacks in narrative spots.
+- **Be honest about uncertainty** — Monte Carlo is probabilistic; remind users what percentiles mean in planning terms (commitments vs. stretch).
+- **Errors**: empathetic and specific (what failed, one concrete fix). Never blame the user.
+- **Avoid**: corporate filler ("leverage", "synergy"), ALL CAPS, exclamation overload, talking down.
+
+### Examples
+
+- Instead of "No valid numbers found" → "I couldn't spot any numbers in that file — try one value per line, or comma-separated (e.g. `5, 3, 7`)."
+- Instead of "Sanity-check your series" → "Glance at the shape: wild spikes or long flat zeros will show up in your forecast whether you expect them or not."
+- After results: interpret spread (tight vs. wide tails) in **one** short paragraph with practical guidance for planning conversations.
+
+Button labels can stay action-focused; surrounding helper text carries the consultant tone.
