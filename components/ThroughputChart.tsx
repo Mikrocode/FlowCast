@@ -39,7 +39,7 @@ export function ThroughputChart({ data }: { data: number[] }) {
               borderRadius: 8,
               border: "1px solid #e2e8f0",
             }}
-            formatter={(value: number | undefined) => [value ?? "—", "Throughput"]}
+            formatter={(value) => [value != null ? String(value) : "—", "Throughput"]}
             labelFormatter={(label) => `Period ${label}`}
           />
           <Line
