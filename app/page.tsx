@@ -25,7 +25,9 @@ const SIMULATIONS = 3000;
 const SIMULATION_COUNT_ANIM_MS = 1800;
 
 export default function Home() {
-  const [remainingInput, setRemainingInput] = useState(String(DEFAULT_REMAINING));
+  const [remainingInput, setRemainingInput] = useState(
+    String(DEFAULT_REMAINING),
+  );
   const [targetInput, setTargetInput] = useState("");
   const [forecastUnit, setForecastUnit] = useState<ForecastUnit>("periods");
   const [sprintLengthWeeks, setSprintLengthWeeks] = useState("2");
@@ -36,7 +38,7 @@ export default function Home() {
   const [isRunning, setIsRunning] = useState(false);
   const [simulationDisplay, setSimulationDisplay] = useState(SIMULATIONS);
   const [throughputHistory, setThroughputHistory] = useState<number[]>(() =>
-    generateRealisticSampleThroughput()
+    generateRealisticSampleThroughput(),
   );
   const [dataError, setDataError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,7 +52,8 @@ export default function Home() {
 
   const remainingParsed = Number.parseInt(remainingInput, 10);
   const targetParsed = Number.parseFloat(targetInput);
-  const targetFromInput = Number.isFinite(targetParsed) && targetParsed > 0 ? targetParsed : null;
+  const targetFromInput =
+    Number.isFinite(targetParsed) && targetParsed > 0 ? targetParsed : null;
 
   const isValid =
     remainingInput.trim() !== "" &&
@@ -64,18 +67,25 @@ export default function Home() {
   const unitSingular = getUnitLabel(forecastUnit, 1);
 
   const effectiveTarget = targetFromInput ?? p85;
-  const successProbability = effectiveTarget != null ? getSuccessProbability(results, effectiveTarget) : 0;
+  const successProbability =
+    effectiveTarget != null
+      ? getSuccessProbability(results, effectiveTarget)
+      : 0;
   const outcomeCategory = getOutcomeCategory(successProbability);
 
   const averageThroughput =
     throughputHistory.length > 0
-      ? throughputHistory.reduce((sum, value) => sum + value, 0) / throughputHistory.length
+      ? throughputHistory.reduce((sum, value) => sum + value, 0) /
+        throughputHistory.length
       : 0;
-  const zeroThroughputPeriods = throughputHistory.filter((value) => value === 0).length;
+  const zeroThroughputPeriods = throughputHistory.filter(
+    (value) => value === 0,
+  ).length;
   const variability = getThroughputVariability(throughputHistory);
 
   const spread = p95 != null && p50 != null ? p95 - p50 : 0;
-  const tightForecast = p50 != null && p85 != null && p95 != null && p95 - p50 <= 1;
+  const tightForecast =
+    p50 != null && p85 != null && p95 != null && p95 - p50 <= 1;
 
   const riskLevel =
     p50 != null && p85 != null && p95 != null
@@ -108,7 +118,7 @@ export default function Home() {
         title: "Buffer / stress case",
       },
     ],
-    [p50, p85, p95]
+    [p50, p85, p95],
   );
 
   const histogram = useMemo(() => buildHistogram(results), [results]);
@@ -175,7 +185,11 @@ export default function Home() {
       rafRef.current = null;
       setSimulationDisplay(SIMULATIONS);
 
-      const sorted = runMonteCarlo(throughputHistory, remainingParsed, SIMULATIONS);
+      const sorted = runMonteCarlo(
+        throughputHistory,
+        remainingParsed,
+        SIMULATIONS,
+      );
       setResults(sorted);
       setP50(percentile(sorted, 50));
       setP85(percentile(sorted, 85));
@@ -206,13 +220,13 @@ export default function Home() {
       const nums = parseThroughputText(text);
       if (nums.length === 0) {
         setDataError(
-          "I couldn't find any numbers in that file. Try one value per line, or commas between values — for example: 5, 3, 7."
+          "I couldn't find any numbers in that file. Try one value per line, or commas between values — for example: 5, 3, 7.",
         );
         return;
       }
       if (!nums.some((t) => t > 0)) {
         setDataError(
-          "Everything came through as zero. I'll need at least one period where you actually shipped something, or the simulation has nothing to sample from."
+          "Everything came through as zero. I'll need at least one period where you actually shipped something, or the simulation has nothing to sample from.",
         );
         return;
       }
@@ -220,7 +234,9 @@ export default function Home() {
       setThroughputHistory(nums);
     };
     reader.onerror = () => {
-      setDataError("I couldn't read that file — if it's open in another app, try closing it or exporting again as CSV or plain text.");
+      setDataError(
+        "I couldn't read that file — if it's open in another app, try closing it or exporting again as CSV or plain text.",
+      );
     };
     reader.readAsText(file);
   }
@@ -294,6 +310,15 @@ export default function Home() {
               )}
             </p>
           </div>
+          <h1 className="font-brand text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+            Flow Cast
+          </h1>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[0.95rem]">
+            I&apos;ll help you turn your throughput history into a
+            probability-based finish forecast — right in the browser. Try a
+            fresh sample run or drop in your own numbers when you&apos;re ready.
+          </p>
+        </div>
 
           <div className={cardClass}>
             <label htmlFor="remaining" className="block text-sm font-medium text-slate-700">
@@ -321,70 +346,156 @@ export default function Home() {
                   onChange={(e) => setForecastUnit(e.target.value as ForecastUnit)}
                   className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900"
                 >
-                  <option value="periods">Periods</option>
-                  <option value="days">Days</option>
-                  <option value="weeks">Weeks</option>
-                  <option value="sprints">Sprints</option>
-                </select>
-              </label>
-
-              <label className="text-xs text-slate-600">
-                Target delivery in ({unitLabel})
+                  Try a fresh example
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePickFile}
+                  disabled={isRunning}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Upload my file
+                </button>
                 <input
-                  type="number"
-                  min={1}
-                  step={0.5}
-                  value={targetInput}
-                  onChange={(e) => setTargetInput(e.target.value)}
-                  placeholder={p85 != null ? `Default: ${formatForecastNumber(p85)}` : "Defaults to p85 after run"}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.txt,text/csv,text/plain"
+                  className="hidden"
+                  onChange={handleFileChange}
                 />
-              </label>
+              </div>
+              {dataError ? (
+                <p className="mt-3 text-sm text-red-600" role="alert">
+                  {dataError}
+                </p>
+              ) : null}
+              <p className="mt-3 text-xs leading-relaxed text-slate-500">
+                {hasThroughputData ? (
+                  <>
+                    So far I&apos;m working with {throughputHistory.length}{" "}
+                    period
+                    {throughputHistory.length === 1 ? "" : "s"} — that&apos;s
+                    enough to run the Monte Carlo.
+                  </>
+                ) : throughputHistory.length > 0 ? (
+                  <>
+                    I see {throughputHistory.length} values, but they&apos;re
+                    all zero. Add at least one period where you actually
+                    delivered something.
+                  </>
+                ) : (
+                  <>
+                    Once you load data, I&apos;ll show how many periods
+                    we&apos;re using.
+                  </>
+                )}
+              </p>
             </div>
 
-            {forecastUnit === "sprints" ? (
-              <label className="mt-3 block text-xs text-slate-600">
-                Sprint length (weeks)
-                <input
-                  type="number"
-                  min={1}
-                  max={6}
-                  step={0.5}
-                  value={sprintLengthWeeks}
-                  onChange={(e) => setSprintLengthWeeks(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
-                />
+            <div className={cardClass}>
+              <label
+                htmlFor="remaining"
+                className="block text-sm font-medium text-slate-700"
+              >
+                How much is left?
               </label>
-            ) : null}
+              <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                Rough count of items, stories, or points still on the wrong side
+                of &quot;done&quot; — pick a unit and stay consistent with your
+                history.
+              </p>
+              <input
+                id="remaining"
+                type="number"
+                min={1}
+                step={1}
+                value={remainingInput}
+                onChange={(e) => setRemainingInput(e.target.value)}
+                disabled={isRunning}
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm outline-none ring-slate-400 focus:border-slate-300 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
+              />
 
-            <button
-              type="button"
-              onClick={handleRun}
-              disabled={!canRunForecast || isRunning}
-              className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isRunning ? "Running the scenarios…" : "Run the forecast"}
-            </button>
-            {!hasThroughputData ? (
-              <p className="mt-2 text-xs leading-relaxed text-amber-800">
-                I need throughput with at least one non-zero period before I can simulate — grab the example data or upload yours when you can.
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="text-xs text-slate-600">
+                  Forecast unit
+                  <select
+                    value={forecastUnit}
+                    onChange={(e) =>
+                      setForecastUnit(e.target.value as ForecastUnit)
+                    }
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900"
+                  >
+                    <option value="periods">Periods</option>
+                    <option value="days">Days</option>
+                    <option value="weeks">Weeks</option>
+                    <option value="sprints">Sprints</option>
+                  </select>
+                </label>
+
+                <label className="text-xs text-slate-600">
+                  Target delivery in ({unitLabel})
+                  <input
+                    type="number"
+                    min={1}
+                    step={0.5}
+                    value={targetInput}
+                    onChange={(e) => setTargetInput(e.target.value)}
+                    placeholder={
+                      p85 != null
+                        ? `Default: ${formatForecastNumber(p85)}`
+                        : "Defaults to p85 after run"
+                    }
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                  />
+                </label>
+              </div>
+
+              {forecastUnit === "sprints" ? (
+                <label className="mt-3 block text-xs text-slate-600">
+                  Sprint length (weeks)
+                  <input
+                    type="number"
+                    min={1}
+                    max={6}
+                    step={0.5}
+                    value={sprintLengthWeeks}
+                    onChange={(e) => setSprintLengthWeeks(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                  />
+                </label>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleRun}
+                disabled={!canRunForecast || isRunning}
+                className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isRunning ? "Running the scenarios…" : "Run the forecast"}
+              </button>
+              {!hasThroughputData ? (
+                <p className="mt-2 text-xs leading-relaxed text-amber-800">
+                  I need throughput with at least one non-zero period before I
+                  can simulate — grab the example data or upload yours when you
+                  can.
+                </p>
+              ) : !isValid ? (
+                <p className="mt-2 text-xs leading-relaxed text-amber-800">
+                  Pop in a positive number for what&apos;s left and we&apos;re
+                  good to go.
+                </p>
+              ) : null}
+              <p
+                className={`mt-3 text-center text-xs tabular-nums ${isRunning ? "font-medium text-slate-700" : "text-slate-500"}`}
+              >
+                {isRunning
+                  ? `Crunching ${simulationDisplay.toLocaleString()} Monte Carlo draws…`
+                  : p50 !== null
+                    ? `That pass used ${SIMULATIONS.toLocaleString()} simulations — happy to re-run if you change the inputs.`
+                    : `When you run, I'll roll ${SIMULATIONS.toLocaleString()} Monte Carlo draws and walk you through what they're suggesting.`}
               </p>
-            ) : !isValid ? (
-              <p className="mt-2 text-xs leading-relaxed text-amber-800">
-                Pop in a positive number for what&apos;s left and we&apos;re good to go.
-              </p>
-            ) : null}
-            <p
-              className={`mt-3 text-center text-xs tabular-nums ${isRunning ? "font-medium text-slate-700" : "text-slate-500"}`}
-            >
-              {isRunning
-                ? `Crunching ${simulationDisplay.toLocaleString()} Monte Carlo draws…`
-                : p50 !== null
-                  ? `That pass used ${SIMULATIONS.toLocaleString()} simulations — happy to re-run if you change the inputs.`
-                  : `When you run, I'll roll ${SIMULATIONS.toLocaleString()} Monte Carlo draws and walk you through what they're suggesting.`}
-            </p>
+            </div>
           </div>
-        </div>
 
         {throughputHistory.length > 0 ? (
           <div className={cardClass}>
@@ -395,6 +506,39 @@ export default function Home() {
             <div className="mt-4">
               <ThroughputChart data={throughputHistory} />
             </div>
+          ) : null}
+
+          {riskLevel != null &&
+          summaryLine &&
+          effectiveTarget != null &&
+          recommendationText ? (
+            <DeliverySignal
+              riskLevel={riskLevel}
+              summary={summaryLine}
+              successProbability={successProbability}
+              target={effectiveTarget}
+              unitLabel={unitLabel}
+              recommendedCommitment={recommendationText}
+              outcomeCategory={outcomeCategory}
+            />
+          ) : null}
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            {cards.map((card) => (
+              <div key={card.label} className="surface-card rounded-2xl p-5">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  {card.label}
+                </p>
+                <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-900">
+                  {card.value === null
+                    ? "—"
+                    : `${formatForecastNumber(card.value)} ${unitLabel}`}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed font-medium text-slate-700">
+                  {card.title}
+                </p>
+              </div>
+            ))}
           </div>
         ) : null}
 
@@ -422,10 +566,18 @@ export default function Home() {
               <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-900">
                 {card.value === null ? "—" : `${formatForecastNumber(card.value)} ${unitLabel}`}
               </p>
-              <p className="mt-1 text-xs leading-relaxed font-medium text-slate-700">{card.title}</p>
+              <div className="mt-4">
+                <ForecastDistributionChart
+                  bins={histogram}
+                  p50={p50}
+                  p85={p85}
+                  p95={p95}
+                  target={effectiveTarget}
+                  unitLabel={unitSingular}
+                />
+              </div>
             </div>
-          ))}
-        </div>
+          ) : null}
 
         {p50 != null && p85 != null && p95 != null && histogram.length > 0 ? (
           <div className={cardClass}>
@@ -443,25 +595,13 @@ export default function Home() {
                 unitLabel={unitSingular}
               />
             </div>
-          </div>
-        ) : null}
-
-        {narrative ? (
-          <div className="rounded-xl border border-indigo-200/80 bg-indigo-50/60 px-5 py-4 shadow-sm">
-            <p className="text-sm font-medium text-indigo-950">Here&apos;s how I&apos;d read this</p>
-            <p className="mt-2 text-sm leading-relaxed text-slate-700">{narrative}</p>
-            {forecastUnit === "sprints" ? (
-              <p className="mt-2 text-xs text-slate-600">
-                Context: 1 sprint is set to about {sprintLengthWeeks} weeks in this view (used for planning language only).
+          ) : (
+            <div className="surface-card rounded-2xl border-dashed px-5 py-4 text-center">
+              <p className="text-sm leading-relaxed text-slate-600">
+                Run the forecast when your history and remaining scope feel
+                right — I&apos;ll spell out what the probability spread implies
+                for your next planning conversation.
               </p>
-            ) : null}
-
-            <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-5">
-              <MetricCell label="Average throughput" value={formatForecastNumber(averageThroughput)} />
-              <MetricCell label="Variability" value={variability} />
-              <MetricCell label="Zero-throughput periods" value={`${zeroThroughputPeriods}/${throughputHistory.length}`} />
-              <MetricCell label="Forecast spread" value={`${formatForecastNumber(spread)} ${unitLabel}`} />
-              <MetricCell label="Target success" value={`${successProbability.toFixed(0)}%`} />
             </div>
           </div>
         ) : (
@@ -481,7 +621,9 @@ export default function Home() {
 function MetricCell({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-indigo-100 bg-white/80 px-3 py-2">
-      <p className="text-[11px] uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="text-[11px] uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
       <p className="mt-1 font-semibold text-slate-900">{value}</p>
     </div>
   );
