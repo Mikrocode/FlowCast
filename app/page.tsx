@@ -1,22 +1,37 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DeliverySignal } from "@/components/DeliverySignal";
 import { FlowCastLogo } from "@/components/FlowCastLogo";
+import { ForecastDistributionChart } from "@/components/ForecastDistributionChart";
 import { ThroughputChart } from "@/components/ThroughputChart";
 import { generateRealisticSampleThroughput } from "@/lib/generateSampleThroughput";
-import { parseThroughputText } from "@/lib/parseThroughput";
+import {
+  buildHistogram,
+  getOutcomeCategory,
+  getRiskLevel,
+  getSuccessProbability,
+  getThroughputVariability,
+  getUnitLabel,
+  type ForecastUnit,
+} from "@/lib/forecastStats";
+import { getNarrative, getRecommendation } from "@/lib/insights";
 import { percentile, runMonteCarlo } from "@/lib/montecarlo";
+import { parseThroughputText } from "@/lib/parseThroughput";
 
 const DEFAULT_REMAINING = 20;
 const SIMULATIONS = 3000;
-/** Visual only: how long the 0 → SIMULATIONS count runs (ms). */
 const SIMULATION_COUNT_ANIM_MS = 1800;
 
 export default function Home() {
   const [remainingInput, setRemainingInput] = useState(String(DEFAULT_REMAINING));
+  const [targetInput, setTargetInput] = useState("");
+  const [forecastUnit, setForecastUnit] = useState<ForecastUnit>("periods");
+  const [sprintLengthWeeks, setSprintLengthWeeks] = useState("2");
   const [p50, setP50] = useState<number | null>(null);
   const [p85, setP85] = useState<number | null>(null);
   const [p95, setP95] = useState<number | null>(null);
+  const [results, setResults] = useState<number[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [simulationDisplay, setSimulationDisplay] = useState(SIMULATIONS);
   const [throughputHistory, setThroughputHistory] = useState<number[]>(() =>
@@ -33,6 +48,9 @@ export default function Home() {
   }, []);
 
   const remainingParsed = Number.parseInt(remainingInput, 10);
+  const targetParsed = Number.parseFloat(targetInput);
+  const targetFromInput = Number.isFinite(targetParsed) && targetParsed > 0 ? targetParsed : null;
+
   const isValid =
     remainingInput.trim() !== "" &&
     Number.isFinite(remainingParsed) &&
@@ -41,38 +59,98 @@ export default function Home() {
   const hasThroughputData =
     throughputHistory.length > 0 && throughputHistory.some((t) => t > 0);
 
+  const unitLabel = getUnitLabel(forecastUnit);
+  const unitSingular = getUnitLabel(forecastUnit, 1);
+
+  const effectiveTarget = targetFromInput ?? p85;
+  const successProbability = effectiveTarget != null ? getSuccessProbability(results, effectiveTarget) : 0;
+  const outcomeCategory = getOutcomeCategory(successProbability);
+
+  const averageThroughput =
+    throughputHistory.length > 0
+      ? throughputHistory.reduce((sum, value) => sum + value, 0) / throughputHistory.length
+      : 0;
+  const zeroThroughputPeriods = throughputHistory.filter((value) => value === 0).length;
+  const variability = getThroughputVariability(throughputHistory);
+
+  const spread = p95 != null && p50 != null ? p95 - p50 : 0;
+  const tightForecast = p50 != null && p85 != null && p95 != null && p95 - p50 <= 1;
+
+  const riskLevel =
+    p50 != null && p85 != null && p95 != null
+      ? getRiskLevel({
+          probability: successProbability,
+          p50,
+          p85,
+          p95,
+          variability,
+          zeroPeriods: zeroThroughputPeriods,
+          totalPeriods: throughputHistory.length,
+        })
+      : null;
+
   const cards = useMemo(
     () => [
       {
         label: "50% confidence",
         value: p50,
-        sub: "About even odds — half the simulated timelines finish here or sooner.",
+        title: "Coin-flip outcome",
       },
       {
         label: "85% confidence",
         value: p85,
-        sub: "I'd lean on this when you need a date you can usually stand behind.",
+        title: "Safer planning point",
       },
       {
         label: "95% confidence",
         value: p95,
-        sub: "The stress case — handy when someone asks how bad late delivery could look.",
+        title: "Buffer / stress case",
       },
     ],
     [p50, p85, p95]
   );
 
-  const consultantClosingNote = useMemo(() => {
-    if (p50 === null || p85 === null || p95 === null) return null;
-    const spread = p95 - p50;
-    if (spread <= 1) {
-      return "Your spread looks tight — throughput has probably been steady. I'd still walk stakeholders through the tails so nobody treats the median as a promise.";
+  const histogram = useMemo(() => buildHistogram(results), [results]);
+
+  const recommendationText =
+    p50 != null && p85 != null && effectiveTarget != null && riskLevel != null
+      ? getRecommendation({
+          riskLevel,
+          outcomeCategory,
+          p50,
+          p85,
+          target: effectiveTarget,
+          unitLabel,
+        })
+      : null;
+
+  const narrative =
+    riskLevel != null && effectiveTarget != null
+      ? getNarrative({
+          riskLevel,
+          outcomeCategory,
+          successProbability,
+          spread,
+          tightForecast,
+          variability,
+          zeroPeriods: zeroThroughputPeriods,
+          totalPeriods: throughputHistory.length,
+          target: effectiveTarget,
+          unitLabel,
+        })
+      : null;
+
+  const summaryLine = useMemo(() => {
+    if (riskLevel == null || effectiveTarget == null) return null;
+
+    if (riskLevel === "Low risk") {
+      return "Delivery looks stable, and planning against the safer range should hold up well.";
     }
-    if (spread <= 3) {
-      return "There's a healthy bit of variability in here. For outward planning I'd anchor on the 85% line, and use the median as 'if the next few periods look like the recent norm.'";
+    if (riskLevel === "Moderate risk") {
+      return "This forecast is usable, but I would not commit to the median without buffer.";
     }
-    return "The range is opening up — usually that's volatility or a rocky history talking. Before you hard-commit, I'd double-check that the remaining work really matches what those past periods represent.";
-  }, [p50, p85, p95]);
+    return "This is directionally helpful, but the risk tail is strong enough to justify a conservative commitment.";
+  }, [effectiveTarget, riskLevel]);
 
   function handleRun() {
     if (!canRunForecast || isRunning) return;
@@ -97,6 +175,7 @@ export default function Home() {
       setSimulationDisplay(SIMULATIONS);
 
       const sorted = runMonteCarlo(throughputHistory, remainingParsed, SIMULATIONS);
+      setResults(sorted);
       setP50(percentile(sorted, 50));
       setP85(percentile(sorted, 85));
       setP95(percentile(sorted, 95));
@@ -148,74 +227,166 @@ export default function Home() {
   const canRunForecast = isValid && hasThroughputData;
 
   return (
-    <main className="relative z-10 mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-12 sm:px-6">
+    <main className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-12 sm:px-6">
       <div className="mb-10 text-center">
         <div className="mb-4 flex justify-center">
           <FlowCastLogo className="h-16 w-16 text-indigo-600 sm:h-[4.5rem] sm:w-[4.5rem]" />
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Flow Cast</h1>
-        <p className="mt-2 max-w-xl mx-auto text-sm leading-relaxed text-slate-600">
+        <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
           I&apos;ll help you turn your throughput history into a probability-based finish forecast — right in the browser.
           Try a fresh sample run or drop in your own numbers when you&apos;re ready.
         </p>
       </div>
 
-      <div className="mx-auto w-full max-w-2xl space-y-6">
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-sm font-medium text-slate-800">Throughput history</h2>
-          <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            Start with what you already track: one completed-items count per period — sprint, week, whatever cadence you use. Paste-friendly
-            CSV or plain text is perfect.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={handleLoadSample}
-              disabled={isRunning}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-            >
-              Try a fresh example
-            </button>
-            <button
-              type="button"
-              onClick={handlePickFile}
-              disabled={isRunning}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-            >
-              Upload my file
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.txt,text/csv,text/plain"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </div>
-          {dataError ? (
-            <p className="mt-3 text-sm text-red-600" role="alert">
-              {dataError}
+      <div className="mx-auto w-full max-w-5xl space-y-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-sm font-medium text-slate-800">Throughput history</h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Start with what you already track: one completed-items count per period — sprint, week, whatever cadence you use. Paste-friendly
+              CSV or plain text is perfect.
             </p>
-          ) : null}
-          <p className="mt-3 text-xs leading-relaxed text-slate-500">
-            {hasThroughputData ? (
-              <>
-                So far I&apos;m working with {throughputHistory.length} period
-                {throughputHistory.length === 1 ? "" : "s"} — that&apos;s enough to run the Monte Carlo.
-              </>
-            ) : throughputHistory.length > 0 ? (
-              <>I see {throughputHistory.length} values, but they&apos;re all zero. Add at least one period where you actually delivered something.</>
-            ) : (
-              <>Once you load data, I&apos;ll show how many periods we&apos;re using.</>
-            )}
-          </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleLoadSample}
+                disabled={isRunning}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+              >
+                Try a fresh example
+              </button>
+              <button
+                type="button"
+                onClick={handlePickFile}
+                disabled={isRunning}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+              >
+                Upload my file
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.txt,text/csv,text/plain"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+            {dataError ? (
+              <p className="mt-3 text-sm text-red-600" role="alert">
+                {dataError}
+              </p>
+            ) : null}
+            <p className="mt-3 text-xs leading-relaxed text-slate-500">
+              {hasThroughputData ? (
+                <>
+                  So far I&apos;m working with {throughputHistory.length} period
+                  {throughputHistory.length === 1 ? "" : "s"} — that&apos;s enough to run the Monte Carlo.
+                </>
+              ) : throughputHistory.length > 0 ? (
+                <>I see {throughputHistory.length} values, but they&apos;re all zero. Add at least one period where you actually delivered something.</>
+              ) : (
+                <>Once you load data, I&apos;ll show how many periods we&apos;re using.</>
+              )}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <label htmlFor="remaining" className="block text-sm font-medium text-slate-700">
+              How much is left?
+            </label>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Rough count of items, stories, or points still on the wrong side of &quot;done&quot; — pick a unit and stay consistent with your history.
+            </p>
+            <input
+              id="remaining"
+              type="number"
+              min={1}
+              step={1}
+              value={remainingInput}
+              onChange={(e) => setRemainingInput(e.target.value)}
+              disabled={isRunning}
+              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm outline-none ring-slate-400 focus:border-slate-300 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
+            />
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs text-slate-600">
+                Forecast unit
+                <select
+                  value={forecastUnit}
+                  onChange={(e) => setForecastUnit(e.target.value as ForecastUnit)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-900"
+                >
+                  <option value="periods">Periods</option>
+                  <option value="days">Days</option>
+                  <option value="weeks">Weeks</option>
+                  <option value="sprints">Sprints</option>
+                </select>
+              </label>
+
+              <label className="text-xs text-slate-600">
+                Target delivery in ({unitLabel})
+                <input
+                  type="number"
+                  min={1}
+                  step={0.5}
+                  value={targetInput}
+                  onChange={(e) => setTargetInput(e.target.value)}
+                  placeholder={p85 != null ? `Default: ${formatForecastNumber(p85)}` : "Defaults to p85 after run"}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                />
+              </label>
+            </div>
+
+            {forecastUnit === "sprints" ? (
+              <label className="mt-3 block text-xs text-slate-600">
+                Sprint length (weeks)
+                <input
+                  type="number"
+                  min={1}
+                  max={6}
+                  step={0.5}
+                  value={sprintLengthWeeks}
+                  onChange={(e) => setSprintLengthWeeks(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                />
+              </label>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={handleRun}
+              disabled={!canRunForecast || isRunning}
+              className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isRunning ? "Running the scenarios…" : "Run the forecast"}
+            </button>
+            {!hasThroughputData ? (
+              <p className="mt-2 text-xs leading-relaxed text-amber-800">
+                I need throughput with at least one non-zero period before I can simulate — grab the example data or upload yours when you can.
+              </p>
+            ) : !isValid ? (
+              <p className="mt-2 text-xs leading-relaxed text-amber-800">
+                Pop in a positive number for what&apos;s left and we&apos;re good to go.
+              </p>
+            ) : null}
+            <p
+              className={`mt-3 text-center text-xs tabular-nums ${isRunning ? "font-medium text-slate-700" : "text-slate-500"}`}
+            >
+              {isRunning
+                ? `Crunching ${simulationDisplay.toLocaleString()} Monte Carlo draws…`
+                : p50 !== null
+                  ? `That pass used ${SIMULATIONS.toLocaleString()} simulations — happy to re-run if you change the inputs.`
+                  : `When you run, I'll roll ${SIMULATIONS.toLocaleString()} Monte Carlo draws and walk you through what they're suggesting.`}
+            </p>
+          </div>
         </div>
 
         {throughputHistory.length > 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-sm font-medium text-slate-800">History chart</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-500">
-              Have a quick look at the shape — lumpy spikes or long stretches at zero will flow straight through into your forecast, for better or worse.
+              Have a quick look at the shape — lumpy spikes or long stretches at zero will flow straight through into your forecast.
             </p>
             <div className="mt-4">
               <ThroughputChart data={throughputHistory} />
@@ -223,50 +394,17 @@ export default function Home() {
           </div>
         ) : null}
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <label htmlFor="remaining" className="block text-sm font-medium text-slate-700">
-            How much is left?
-          </label>
-          <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            Rough count of items, stories, or points still on the wrong side of &quot;done&quot; — pick a unit and stay consistent with your history.
-          </p>
-          <input
-            id="remaining"
-            type="number"
-            min={1}
-            step={1}
-            value={remainingInput}
-            onChange={(e) => setRemainingInput(e.target.value)}
-            disabled={isRunning}
-            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm outline-none ring-slate-400 focus:border-slate-300 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
+        {riskLevel != null && summaryLine && effectiveTarget != null && recommendationText ? (
+          <DeliverySignal
+            riskLevel={riskLevel}
+            summary={summaryLine}
+            successProbability={successProbability}
+            target={effectiveTarget}
+            unitLabel={unitLabel}
+            recommendedCommitment={recommendationText}
+            outcomeCategory={outcomeCategory}
           />
-          <button
-            type="button"
-            onClick={handleRun}
-            disabled={!canRunForecast || isRunning}
-            className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isRunning ? "Running the scenarios…" : "Run the forecast"}
-          </button>
-          {!hasThroughputData ? (
-            <p className="mt-2 text-xs leading-relaxed text-amber-800">
-              I need throughput with at least one non-zero period before I can simulate — grab the example data or upload yours when you can.
-            </p>
-          ) : !isValid ? (
-            <p className="mt-2 text-xs leading-relaxed text-amber-800">
-              Pop in a positive number for what&apos;s left and we&apos;re good to go.
-            </p>
-          ) : null}
-          <p
-            className={`mt-3 text-center text-xs tabular-nums ${isRunning ? "font-medium text-slate-700" : "text-slate-500"}`}
-          >
-            {isRunning
-              ? `Crunching ${simulationDisplay.toLocaleString()} Monte Carlo draws…`
-              : p50 !== null
-                ? `That pass used ${SIMULATIONS.toLocaleString()} simulations — happy to re-run if you change the inputs.`
-                : `When you run, I'll roll ${SIMULATIONS.toLocaleString()} Monte Carlo draws and walk you through what they're suggesting.`}
-          </p>
-        </div>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-3">
           {cards.map((card) => (
@@ -278,23 +416,55 @@ export default function Home() {
                 {card.label}
               </p>
               <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-900">
-                {card.value === null ? "—" : formatPeriods(card.value)}
+                {card.value === null ? "—" : `${formatForecastNumber(card.value)} ${unitLabel}`}
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-500">{card.sub}</p>
+              <p className="mt-1 text-xs leading-relaxed font-medium text-slate-700">{card.title}</p>
             </div>
           ))}
         </div>
 
-        {consultantClosingNote ? (
+        {p50 != null && p85 != null && p95 != null && histogram.length > 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-sm font-medium text-slate-800">Forecast distribution</h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              This shows the full shape of outcomes across simulations so uncertainty is visible, not hidden behind three points.
+            </p>
+            <div className="mt-4">
+              <ForecastDistributionChart
+                bins={histogram}
+                p50={p50}
+                p85={p85}
+                p95={p95}
+                target={effectiveTarget}
+                unitLabel={unitSingular}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {narrative ? (
           <div className="rounded-xl border border-indigo-200/80 bg-indigo-50/60 px-5 py-4 shadow-sm">
             <p className="text-sm font-medium text-indigo-950">Here&apos;s how I&apos;d read this</p>
-            <p className="mt-2 text-sm leading-relaxed text-slate-700">{consultantClosingNote}</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-700">{narrative}</p>
+            {forecastUnit === "sprints" ? (
+              <p className="mt-2 text-xs text-slate-600">
+                Context: 1 sprint is set to about {sprintLengthWeeks} weeks in this view (used for planning language only).
+              </p>
+            ) : null}
+
+            <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-5">
+              <MetricCell label="Average throughput" value={formatForecastNumber(averageThroughput)} />
+              <MetricCell label="Variability" value={variability} />
+              <MetricCell label="Zero-throughput periods" value={`${zeroThroughputPeriods}/${throughputHistory.length}`} />
+              <MetricCell label="Forecast spread" value={`${formatForecastNumber(spread)} ${unitLabel}`} />
+              <MetricCell label="Target success" value={`${successProbability.toFixed(0)}%`} />
+            </div>
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-5 py-4 text-center shadow-sm">
             <p className="text-sm leading-relaxed text-slate-600">
-              Run the forecast when your history and remaining scope feel right — I&apos;ll spell out what the percentiles imply for your next
-              conversation with leadership.
+              Run the forecast when your history and remaining scope feel right — I&apos;ll spell out what the probability spread implies for your next
+              planning conversation.
             </p>
           </div>
         )}
@@ -303,7 +473,16 @@ export default function Home() {
   );
 }
 
-function formatPeriods(n: number): string {
+function MetricCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-indigo-100 bg-white/80 px-3 py-2">
+      <p className="text-[11px] uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 font-semibold text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function formatForecastNumber(n: number): string {
   if (Number.isInteger(n)) return String(n);
   return n.toFixed(1);
 }
