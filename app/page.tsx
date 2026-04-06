@@ -434,6 +434,18 @@ export default function Home() {
               </div>
             </section>
           ) : null}
+
+          <footer className="pt-2 text-center text-xs text-slate-500">
+            © Mikrocode 2026 ·{" "}
+            <a
+              href="https://mikrocode.nl"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-900"
+            >
+              mikrocode.nl
+            </a>
+          </footer>
         </div>
       </main>
     </div>
