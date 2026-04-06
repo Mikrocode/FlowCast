@@ -5,96 +5,73 @@ type AnimatedDiceLogoProps = {
 export function AnimatedDiceLogo({ className }: AnimatedDiceLogoProps) {
   return (
     <svg
-      viewBox="0 0 150 130"
+      viewBox="0 0 120 120"
+      fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       role="img"
-      aria-label="Flow Cast rolling dice logo"
+      aria-label="Flow Cast logo"
     >
-      <defs>
-        <linearGradient id="flowRing" x1="16" y1="64" x2="134" y2="64" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#818cf8" stopOpacity="0" />
-          <stop offset="0.5" stopColor="#6366f1" stopOpacity="0.7" />
-          <stop offset="1" stopColor="#818cf8" stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id="dieStroke" x1="36" y1="22" x2="116" y2="103" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#818cf8" />
-          <stop offset="1" stopColor="#4f46e5" />
-        </linearGradient>
-        <filter id="softGlow" x="-35%" y="-35%" width="170%" height="170%">
-          <feGaussianBlur stdDeviation="5" result="blurred" />
-          <feMerge>
-            <feMergeNode in="blurred" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
-      <ellipse cx="75" cy="66" rx="58" ry="24" fill="none" stroke="url(#flowRing)" strokeWidth="1.5" opacity="0.9">
-        <animateTransform
-          attributeName="transform"
-          type="rotate"
-          from="0 75 66"
-          to="360 75 66"
-          dur="18s"
-          repeatCount="indefinite"
+      <g className="logo-float">
+        <circle cx="60" cy="60" r="38" className="logo-ring-pulse" />
+        <path
+          d="M21 60C29 43 42 34 60 34C78 34 92 42 100 58"
+          stroke="url(#logoPath)"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          opacity="0.8"
         />
-      </ellipse>
-
-      <path
-        d="M12 86C35 70 61 66 75 66C90 66 115 70 138 86"
-        fill="none"
-        stroke="#6366f1"
-        strokeOpacity="0.22"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-
-      <g filter="url(#softGlow)">
-        <g>
-          <animateTransform
-            attributeName="transform"
-            type="translate"
-            values="-10,0; 4,-8; -10,0"
-            dur="5.6s"
-            repeatCount="indefinite"
-          />
-          <animateTransform
-            attributeName="transform"
-            additive="sum"
-            type="rotate"
-            values="-8 58 56; 10 58 56; -8 58 56"
-            dur="5.6s"
-            repeatCount="indefinite"
-          />
-          <rect x="42" y="40" width="32" height="32" rx="9" fill="white" stroke="url(#dieStroke)" strokeWidth="2.4" />
-          <circle cx="53" cy="51" r="2.6" fill="#4f46e5" />
-          <circle cx="63" cy="61" r="2.6" fill="#4f46e5" />
-        </g>
-
-        <g>
-          <animateTransform
-            attributeName="transform"
-            type="translate"
-            values="10,4; -5,-7; 10,4"
-            dur="6.2s"
-            repeatCount="indefinite"
-          />
-          <animateTransform
-            attributeName="transform"
-            additive="sum"
-            type="rotate"
-            values="12 92 68; -10 92 68; 12 92 68"
-            dur="6.2s"
-            repeatCount="indefinite"
-          />
-          <rect x="76" y="52" width="32" height="32" rx="9" fill="white" stroke="url(#dieStroke)" strokeWidth="2.4" />
-          <circle cx="87" cy="63" r="2.4" fill="#4f46e5" />
-          <circle cx="98" cy="63" r="2.4" fill="#4f46e5" />
-          <circle cx="87" cy="74" r="2.4" fill="#4f46e5" />
-          <circle cx="98" cy="74" r="2.4" fill="#4f46e5" />
-        </g>
+        <path
+          d="M21 72C31 57 44 49 60 49C76 49 90 56 101 70"
+          stroke="url(#logoPathSoft)"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          opacity="0.5"
+        />
       </g>
+
+      <g className="logo-float logo-spin-soft" transform="translate(32 28)">
+        <rect
+          x="12"
+          y="10"
+          width="38"
+          height="38"
+          rx="9"
+          className="fill-white/95 stroke-indigo-400/80"
+          strokeWidth="1.8"
+        />
+        <circle cx="25" cy="23" r="2.6" className="fill-indigo-600" />
+        <circle cx="37" cy="36" r="2.6" className="fill-indigo-600" />
+      </g>
+
+      <g className="logo-float-reverse logo-spin-soft-reverse" transform="translate(48 42)">
+        <rect
+          x="10"
+          y="9"
+          width="38"
+          height="38"
+          rx="9"
+          className="fill-white stroke-indigo-500/90"
+          strokeWidth="1.8"
+        />
+        <circle cx="22.5" cy="21.5" r="2.5" className="fill-indigo-600" />
+        <circle cx="35.5" cy="21.5" r="2.5" className="fill-indigo-600" />
+        <circle cx="22.5" cy="34.5" r="2.5" className="fill-indigo-600" />
+        <circle cx="35.5" cy="34.5" r="2.5" className="fill-indigo-600" />
+      </g>
+
+      <defs>
+        <linearGradient id="logoPath" x1="21" y1="34" x2="100" y2="58" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#6366f1" stopOpacity="0" />
+          <stop offset="0.5" stopColor="#6366f1" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#6366f1" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="logoPathSoft" x1="21" y1="49" x2="101" y2="70" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#8b5cf6" stopOpacity="0" />
+          <stop offset="0.5" stopColor="#8b5cf6" stopOpacity="0.45" />
+          <stop offset="1" stopColor="#8b5cf6" stopOpacity="0" />
+        </linearGradient>
+      </defs>
     </svg>
   );
 }

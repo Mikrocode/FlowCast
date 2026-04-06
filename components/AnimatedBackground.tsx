@@ -5,9 +5,6 @@ export function AnimatedBackground() {
       aria-hidden
     >
       <div className="bg-mesh-ambient absolute inset-0" />
-      <div className="bg-blob bg-blob-a absolute -left-28 top-[-4rem] h-72 w-72 rounded-full" />
-      <div className="bg-blob bg-blob-b absolute right-[-4rem] top-[15%] h-80 w-80 rounded-full" />
-      <div className="bg-blob bg-blob-c absolute bottom-[-8rem] left-[28%] h-96 w-96 rounded-full" />
       <div className="bg-grid-overlay absolute inset-0" />
       <svg
         className="absolute inset-0 h-full w-full opacity-40"
