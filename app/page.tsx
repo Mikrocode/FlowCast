@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FlowCastLogo } from "@/components/FlowCastLogo";
 import { ThroughputChart } from "@/components/ThroughputChart";
-import { sampleThroughput } from "@/data/sampleThroughput";
+import { generateRealisticSampleThroughput } from "@/lib/generateSampleThroughput";
 import { parseThroughputText } from "@/lib/parseThroughput";
 import { percentile, runMonteCarlo } from "@/lib/montecarlo";
 
@@ -18,7 +19,9 @@ export default function Home() {
   const [p95, setP95] = useState<number | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [simulationDisplay, setSimulationDisplay] = useState(SIMULATIONS);
-  const [throughputHistory, setThroughputHistory] = useState<number[]>(() => [...sampleThroughput]);
+  const [throughputHistory, setThroughputHistory] = useState<number[]>(() =>
+    generateRealisticSampleThroughput()
+  );
   const [dataError, setDataError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -81,7 +84,7 @@ export default function Home() {
 
   function handleLoadSample() {
     setDataError(null);
-    setThroughputHistory([...sampleThroughput]);
+    setThroughputHistory(generateRealisticSampleThroughput());
   }
 
   function handlePickFile() {
@@ -117,11 +120,12 @@ export default function Home() {
   const canRunForecast = isValid && hasThroughputData;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-12 sm:px-6">
+    <main className="relative z-10 mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-12 sm:px-6">
       <div className="mb-10 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-          Agile Delivery Forecaster
-        </h1>
+        <div className="mb-4 flex justify-center">
+          <FlowCastLogo className="h-16 w-16 text-indigo-600 sm:h-[4.5rem] sm:w-[4.5rem]" />
+        </div>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Flow Cast</h1>
         <p className="mt-2 text-sm text-slate-600">
           Monte Carlo forecast from throughput history (client-side). Load sample data or upload your own.
         </p>
