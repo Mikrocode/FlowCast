@@ -362,7 +362,7 @@ export default function Home() {
               <h2 className="text-sm font-medium text-slate-800">History chart</h2>
               <p className="mt-1 text-xs leading-relaxed text-slate-500">Spikes and zero periods directly shape the forecast spread.</p>
               <div className="mt-4">
-                <ThroughputChart data={throughputHistory} />
+                <ThroughputChart data={throughputHistory} unitLabel={unitLabel} />
               </div>
             </section>
           ) : null}
