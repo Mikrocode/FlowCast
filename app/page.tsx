@@ -1,17 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { sampleThroughput } from "@/data/sampleThroughput";
 import { percentile, runMonteCarlo } from "@/lib/montecarlo";
 
 const DEFAULT_REMAINING = 20;
 const SIMULATIONS = 3000;
+/** Visual only: how long the 0 → SIMULATIONS count runs (ms). */
+const SIMULATION_COUNT_ANIM_MS = 1800;
 
 export default function Home() {
   const [remainingInput, setRemainingInput] = useState(String(DEFAULT_REMAINING));
   const [p50, setP50] = useState<number | null>(null);
   const [p85, setP85] = useState<number | null>(null);
   const [p95, setP95] = useState<number | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [simulationDisplay, setSimulationDisplay] = useState(SIMULATIONS);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const remainingParsed = Number.parseInt(remainingInput, 10);
   const isValid =
@@ -29,11 +40,35 @@ export default function Home() {
   );
 
   function handleRun() {
-    if (!isValid) return;
-    const sorted = runMonteCarlo(sampleThroughput, remainingParsed, SIMULATIONS);
-    setP50(percentile(sorted, 50));
-    setP85(percentile(sorted, 85));
-    setP95(percentile(sorted, 95));
+    if (!isValid || isRunning) return;
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+
+    setIsRunning(true);
+    setSimulationDisplay(0);
+
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / SIMULATION_COUNT_ANIM_MS);
+      const value = Math.min(SIMULATIONS, Math.floor(t * SIMULATIONS));
+      setSimulationDisplay(value);
+
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      rafRef.current = null;
+      setSimulationDisplay(SIMULATIONS);
+
+      const sorted = runMonteCarlo(sampleThroughput, remainingParsed, SIMULATIONS);
+      setP50(percentile(sorted, 50));
+      setP85(percentile(sorted, 85));
+      setP95(percentile(sorted, 95));
+      setIsRunning(false);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
   }
 
   return (
@@ -59,18 +94,21 @@ export default function Home() {
             step={1}
             value={remainingInput}
             onChange={(e) => setRemainingInput(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm outline-none ring-slate-400 focus:border-slate-300 focus:ring-2"
+            disabled={isRunning}
+            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm outline-none ring-slate-400 focus:border-slate-300 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
           />
           <button
             type="button"
             onClick={handleRun}
-            disabled={!isValid}
+            disabled={!isValid || isRunning}
             className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Run forecast
+            {isRunning ? "Running…" : "Run forecast"}
           </button>
-          <p className="mt-3 text-center text-xs text-slate-500">
-            Simulations: {SIMULATIONS.toLocaleString()}
+          <p
+            className={`mt-3 text-center text-xs tabular-nums ${isRunning ? "font-medium text-slate-700" : "text-slate-500"}`}
+          >
+            Simulations: {simulationDisplay.toLocaleString()}
           </p>
         </div>
 
