@@ -10,23 +10,33 @@ import {
   YAxis,
 } from "recharts";
 
-type Point = { period: number; throughput: number };
+type Point = { unitIndex: number; throughput: number };
 
-export function ThroughputChart({ data }: { data: number[] }) {
+type ThroughputChartProps = {
+  data: number[];
+  unitLabel: string;
+};
+
+function toTitleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function ThroughputChart({ data, unitLabel }: ThroughputChartProps) {
   const chartData: Point[] = data.map((throughput, i) => ({
-    period: i + 1,
+    unitIndex: i + 1,
     throughput,
   }));
+  const axisLabel = toTitleCase(unitLabel);
 
   return (
-    <div className="h-56 w-full min-w-0">
+    <div className="h-60 w-full min-w-0">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
           <XAxis
-            dataKey="period"
+            dataKey="unitIndex"
             tick={{ fontSize: 11, fill: "#64748b" }}
-            label={{ value: "Period", position: "insideBottom", offset: -4, fill: "#64748b", fontSize: 11 }}
+            label={{ value: axisLabel, position: "bottom", offset: 8, fill: "#64748b", fontSize: 11 }}
           />
           <YAxis
             tick={{ fontSize: 11, fill: "#64748b" }}
@@ -40,7 +50,7 @@ export function ThroughputChart({ data }: { data: number[] }) {
               border: "1px solid #e2e8f0",
             }}
             formatter={(value) => [value != null ? String(value) : "—", "Throughput"]}
-            labelFormatter={(label) => `Period ${label}`}
+            labelFormatter={(label) => `${axisLabel} ${label}`}
           />
           <Line
             type="monotone"

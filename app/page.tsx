@@ -35,7 +35,6 @@ export default function Home() {
   const [remainingInput, setRemainingInput] = useState(String(DEFAULT_REMAINING));
   const [targetInput, setTargetInput] = useState("");
   const [forecastUnit, setForecastUnit] = useState<ForecastUnit>("periods");
-  const [sprintLengthWeeks, setSprintLengthWeeks] = useState("2");
   const [p50, setP50] = useState<number | null>(null);
   const [p85, setP85] = useState<number | null>(null);
   const [p95, setP95] = useState<number | null>(null);
@@ -277,6 +276,20 @@ export default function Home() {
                   ? `Using ${throughputHistory.length} periods of throughput history.`
                   : "Add data with at least one non-zero period to run the forecast."}
               </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <MetricCell
+                  label="Average throughput"
+                  value={formatForecastNumber(averageThroughput)}
+                />
+                <MetricCell
+                  label="Zero periods"
+                  value={`${zeroThroughputPeriods}/${throughputHistory.length}`}
+                />
+                <MetricCell
+                  label="Variability"
+                  value={variability}
+                />
+              </div>
             </div>
 
             <div className="surface-card rounded-2xl p-6">
@@ -324,20 +337,6 @@ export default function Home() {
                 </label>
               </div>
 
-              {forecastUnit === "sprints" ? (
-                <label className="mt-3 block text-xs text-slate-600">
-                  Sprint length (weeks)
-                  <input
-                    type="number"
-                    min={1}
-                    max={6}
-                    step={0.5}
-                    value={sprintLengthWeeks}
-                    onChange={(e) => setSprintLengthWeeks(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
-                  />
-                </label>
-              ) : null}
 
               <button
                 type="button"
