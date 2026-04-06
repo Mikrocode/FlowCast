@@ -13,6 +13,79 @@ type NarrativeInput = {
   unitLabel: string;
 };
 
+export function getSafeCommitment(p85: number, unitLabel: string): string {
+  return `${formatForecastNumber(p85)} ${unitLabel}`;
+}
+
+export function getMainDecisionCopy(input: {
+  successProbability: number;
+  target: number;
+  unitLabel: string;
+  p85: number;
+  riskLevel: RiskLevel;
+}): {
+  headline: string;
+  subline: string;
+  supportLine: string;
+} {
+  const { successProbability, target, unitLabel, p85, riskLevel } = input;
+
+  const headline = `${successProbability.toFixed(0)}% chance to hit ${formatForecastNumber(target)} ${unitLabel}`;
+
+  const subline =
+    successProbability >= 85
+      ? "Safe enough to commit with normal execution discipline."
+      : successProbability >= 65
+        ? "This is plausible, but not safe enough to promise."
+        : "Not a safe commitment yet.";
+
+  const supportLine =
+    riskLevel === "Low risk"
+      ? `Planning anchor: about ${formatForecastNumber(p85)} ${unitLabel} at 85% confidence.`
+      : `Safer commitment: about ${formatForecastNumber(p85)} ${unitLabel} (85% confidence).`;
+
+  return { headline, subline, supportLine };
+}
+
+export function getActionGuidance(input: {
+  variability: VariabilityLevel;
+  zeroPeriods: number;
+  totalPeriods: number;
+  spread: number;
+  p50: number;
+  p85: number;
+  successProbability: number;
+}): string[] {
+  const { variability, zeroPeriods, totalPeriods, spread, p50, p85, successProbability } = input;
+  const actions: string[] = [];
+
+  const zeroShare = totalPeriods > 0 ? zeroPeriods / totalPeriods : 0;
+
+  if (zeroShare >= 0.15) {
+    actions.push(
+      `Review the ${zeroPeriods} zero-throughput periods and remove the top interruption pattern before the next cycle.`
+    );
+  }
+
+  if (variability === "High") {
+    actions.push("Split large work items earlier so throughput swings are smaller week to week.");
+  }
+
+  if (spread >= 4 || p85 - p50 >= 2) {
+    actions.push("Reduce work-in-progress and clear dependencies before pull-in to tighten the long-tail risk.");
+  }
+
+  if (successProbability < 65) {
+    actions.push("Cut or stage scope for the target date, then re-run the forecast before making an external promise.");
+  }
+
+  if (actions.length < 2) {
+    actions.push("Track dependency age and blocked time explicitly so delivery drag is visible early.");
+  }
+
+  return actions.slice(0, 4);
+}
+
 export function getNarrative(input: NarrativeInput): string {
   const {
     riskLevel,
@@ -28,28 +101,28 @@ export function getNarrative(input: NarrativeInput): string {
   } = input;
 
   if (tightForecast) {
-    return `This distribution is unusually tight, which is rare and useful. With current data, delivery looks highly predictable and a ${target} ${unitLabel} commitment is credible as long as scope stays stable.`;
+    return `This is usable for planning and tight enough for a real commitment. ${formatForecastNumber(target)} ${unitLabel} is credible if scope stays stable.`;
   }
 
   const zeroShare = totalPeriods > 0 ? (zeroPeriods / totalPeriods) * 100 : 0;
 
   if (riskLevel === "High risk") {
-    return `You have a ${successProbability.toFixed(0)}% shot at landing inside ${target} ${unitLabel}, so this sits in ${outcomeCategory.toLowerCase()} territory. The tail risk is still meaningful, so I would avoid committing to the median and focus on scope control over optimism.`;
+    return `The target is achievable, but still too exposed for a hard promise. I would plan around the safer range and treat earlier delivery as upside.`;
   }
 
   if (riskLevel === "Moderate risk") {
     if (variability === "High" || spread >= 4) {
-      return `You have a decent shot at hitting ${target} ${unitLabel}, but I would not call it safe yet. There is enough spread here that pushing harder is less useful than keeping scope clean and reducing churn.`;
+      return `This is plausible, but not safe enough to promise. I'd plan around the 85% point and treat median timing as upside.`;
     }
 
     if (zeroShare >= 10) {
-      return `This forecast is usable, but the stop-start history (${zeroPeriods} zero-throughput periods) can still bite. I'd communicate ${target} ${unitLabel} as doable, then keep buffer in case the quieter periods repeat.`;
+      return `The stop-start pattern still adds enough risk that I would not commit to the median. Keep buffer until those quiet periods are reduced.`;
     }
 
-    return `Delivery looks stable, but I would still plan on the safer range. ${target} ${unitLabel} is attainable, and I'd present the median as upside rather than as the commitment.`;
+    return `${outcomeCategory} is workable for internal planning, but I'd still communicate the safer range externally.`;
   }
 
-  return `This looks stable enough to plan against the safer range. At ${successProbability.toFixed(0)}% confidence for ${target} ${unitLabel}, I'd call the target safe while still carrying a light buffer if the date is business-critical.`;
+  return `This is stable enough for planning and the target currently sits in a safe zone at ${successProbability.toFixed(0)}% confidence.`;
 }
 
 export function getRecommendation(input: {
@@ -63,12 +136,17 @@ export function getRecommendation(input: {
   const { riskLevel, outcomeCategory, p50, p85, target, unitLabel } = input;
 
   if (riskLevel === "Low risk") {
-    return `Recommended commitment: ${target} ${unitLabel}. You can use the 85% line (${p85.toFixed(1)} ${unitLabel}) as your default planning point and treat ${p50.toFixed(1)} as upside.`;
+    return `Recommended commitment: ${formatForecastNumber(target)} ${unitLabel}. Keep ${formatForecastNumber(p85)} ${unitLabel} as the default planning anchor and treat ${formatForecastNumber(p50)} ${unitLabel} as upside.`;
   }
 
   if (riskLevel === "Moderate risk") {
-    return `Recommended commitment: stay near the safer range. ${outcomeCategory} means the target is plausible, but the cleaner external promise is around ${p85.toFixed(1)} ${unitLabel}.`;
+    return `Recommended commitment: ${outcomeCategory.toLowerCase()} does not justify a tight promise. Anchor commitments around ${formatForecastNumber(p85)} ${unitLabel}.`;
   }
 
-  return `Recommended commitment: do not anchor on the median (${p50.toFixed(1)} ${unitLabel}). With this risk profile, set expectations closer to ${p85.toFixed(1)} ${unitLabel} and protect scope.`;
+  return `Recommended commitment: avoid anchoring on the median (${formatForecastNumber(p50)} ${unitLabel}). Set expectations near ${formatForecastNumber(p85)} ${unitLabel} and protect scope.`;
+}
+
+function formatForecastNumber(n: number): string {
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(1);
 }

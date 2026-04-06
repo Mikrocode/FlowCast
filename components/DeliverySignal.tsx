@@ -2,12 +2,12 @@ import type { OutcomeCategory, RiskLevel } from "@/lib/forecastStats";
 
 type DeliverySignalProps = {
   riskLevel: RiskLevel;
-  summary: string;
-  successProbability: number;
-  target: number;
-  unitLabel: string;
-  recommendedCommitment: string;
   outcomeCategory: OutcomeCategory;
+  headline: string;
+  subline: string;
+  supportLine: string;
+  safePlanningPoint: string;
+  interpretation: string;
 };
 
 function riskStyles(riskLevel: RiskLevel): string {
@@ -29,29 +29,47 @@ function categoryStyles(category: OutcomeCategory): string {
 
 export function DeliverySignal({
   riskLevel,
-  summary,
-  successProbability,
-  target,
-  unitLabel,
-  recommendedCommitment,
   outcomeCategory,
+  headline,
+  subline,
+  supportLine,
+  safePlanningPoint,
+  interpretation,
 }: DeliverySignalProps) {
   return (
-    <section className="rounded-2xl border border-indigo-200 bg-white p-6 shadow-sm">
+    <section className="surface-card rounded-2xl border-2 border-slate-100 p-6 sm:p-7">
       <div className="flex flex-wrap items-center gap-3">
-        <span className={`rounded-full border px-3 py-1 text-xs font-semibold tracking-wide ${riskStyles(riskLevel)}`}>
-          {riskLevel}
+        <span
+          className={`rounded-full border px-3 py-1 text-xs font-semibold tracking-wide ${riskStyles(riskLevel)}`}
+        >
+          Risk badge: {riskLevel}
         </span>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${categoryStyles(outcomeCategory)}`}>
-          {outcomeCategory}
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${categoryStyles(outcomeCategory)}`}
+        >
+          Outcome: {outcomeCategory}
         </span>
       </div>
 
-      <h2 className="mt-4 text-2xl font-semibold text-slate-900 sm:text-3xl">
-        {successProbability.toFixed(0)}% chance to finish within {target.toFixed(target % 1 === 0 ? 0 : 1)} {unitLabel}
+      <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+        {headline}
       </h2>
-      <p className="mt-2 text-sm leading-relaxed text-slate-700">{summary}</p>
-      <p className="mt-3 text-sm leading-relaxed text-slate-600">{recommendedCommitment}</p>
+      <p className="mt-2 text-base font-medium text-slate-800">{subline}</p>
+      <p className="mt-1 text-sm leading-relaxed text-slate-600">{supportLine}</p>
+
+      <div className="mt-5 rounded-xl border border-indigo-200 bg-indigo-50/70 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
+          Safer planning point
+        </p>
+        <p className="mt-1 text-2xl font-bold text-indigo-950">{safePlanningPoint}</p>
+        <p className="mt-1 text-sm text-indigo-900/90">
+          Use this as the commitment date unless you can tolerate more risk.
+        </p>
+      </div>
+
+      <div className="mt-5 border-l-4 border-slate-300 pl-4">
+        <p className="text-sm leading-relaxed text-slate-700">{interpretation}</p>
+      </div>
     </section>
   );
 }
