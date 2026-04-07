@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import {
   CartesianGrid,
   Line,
@@ -21,7 +22,7 @@ function toTitleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-export function ThroughputChart({ data, unitLabel }: ThroughputChartProps) {
+function ThroughputChartComponent({ data, unitLabel }: ThroughputChartProps) {
   const chartData: Point[] = data.map((throughput, i) => ({
     unitIndex: i + 1,
     throughput,
@@ -65,3 +66,6 @@ export function ThroughputChart({ data, unitLabel }: ThroughputChartProps) {
     </div>
   );
 }
+
+
+export const ThroughputChart = memo(ThroughputChartComponent);
