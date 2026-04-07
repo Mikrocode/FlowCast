@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { ActionGuidance } from "@/components/ActionGuidance";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { AnimatedDiceLogo } from "@/components/AnimatedDiceLogo";
 import { DeliverySignal } from "@/components/DeliverySignal";
-import { ForecastDistributionChart } from "@/components/ForecastDistributionChart";
-import { ThroughputChart } from "@/components/ThroughputChart";
 import { generateRealisticSampleThroughput } from "@/lib/generateSampleThroughput";
 import {
   buildHistogram,
@@ -30,6 +29,14 @@ import { parseThroughputText } from "@/lib/parseThroughput";
 const DEFAULT_REMAINING = 20;
 const SIMULATIONS = 3000;
 const SIMULATION_COUNT_ANIM_MS = 1800;
+const ThroughputChart = dynamic(
+  () => import("@/components/ThroughputChart").then((module) => module.ThroughputChart),
+  { ssr: false },
+);
+const ForecastDistributionChart = dynamic(
+  () => import("@/components/ForecastDistributionChart").then((module) => module.ForecastDistributionChart),
+  { ssr: false },
+);
 
 export default function Home() {
   const [remainingInput, setRemainingInput] = useState(String(DEFAULT_REMAINING));
@@ -364,7 +371,7 @@ export default function Home() {
               <h2 className="text-sm font-medium text-slate-800">History chart</h2>
               <p className="mt-1 text-xs leading-relaxed text-slate-500">Spikes and zero periods directly shape the forecast spread.</p>
               <div className="mt-4">
-                <ThroughputChart data={throughputHistory} unitLabel={unitLabel} />
+                <ThroughputChart key={`history-${unitLabel}`} data={throughputHistory} unitLabel={unitLabel} />
               </div>
             </section>
           ) : null}
@@ -402,6 +409,7 @@ export default function Home() {
               </p>
               <div className="mt-4">
                 <ForecastDistributionChart
+                  key={`distribution-${unitLabel}`}
                   bins={histogram}
                   p50={p50}
                   p85={p85}
