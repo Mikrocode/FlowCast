@@ -51,6 +51,9 @@ function randomFace(): DieFace {
   return (Math.floor(Math.random() * 6) + 1) as DieFace;
 }
 
+const INITIAL_LEFT_FACE: DieFace = 3;
+const INITIAL_RIGHT_FACE: DieFace = 5;
+
 function Die({
   x,
   y,
@@ -112,8 +115,8 @@ function Die({
 }
 
 export function AnimatedDiceLogo({ className }: AnimatedDiceLogoProps) {
-  const [leftFace, setLeftFace] = useState<DieFace>(randomFace());
-  const [rightFace, setRightFace] = useState<DieFace>(randomFace());
+  const [leftFace, setLeftFace] = useState<DieFace>(INITIAL_LEFT_FACE);
+  const [rightFace, setRightFace] = useState<DieFace>(INITIAL_RIGHT_FACE);
   const [rollStep, setRollStep] = useState(0);
 
   useEffect(() => {
