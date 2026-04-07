@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import {
   Bar,
   CartesianGrid,
@@ -36,7 +37,7 @@ function markerChip(label: string, value: number, color: string, detail: string)
   );
 }
 
-export function ForecastDistributionChart({
+function ForecastDistributionChartComponent({
   bins,
   p50,
   p85,
@@ -139,3 +140,6 @@ export function ForecastDistributionChart({
     </div>
   );
 }
+
+
+export const ForecastDistributionChart = memo(ForecastDistributionChartComponent);
