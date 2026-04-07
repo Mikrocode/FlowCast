@@ -41,13 +41,15 @@ export default function Home() {
   const [results, setResults] = useState<number[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [simulationDisplay, setSimulationDisplay] = useState(SIMULATIONS);
-  const [throughputHistory, setThroughputHistory] = useState<number[]>(() =>
-    generateRealisticSampleThroughput(),
-  );
+  const [throughputHistory, setThroughputHistory] = useState<number[]>([]);
   const [dataError, setDataError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setThroughputHistory(generateRealisticSampleThroughput());
+  }, []);
 
   useEffect(() => {
     return () => {
